@@ -1,7 +1,7 @@
 #+os-macosx
 (progn
   (in-package :reactor.kqueue)
-  
+
   (include "sys/types.h"
 	   "sys/event.h"
 	   "sys/time.h")
@@ -49,6 +49,11 @@
 (progn
   (in-package :reactor.epoll)
 
+  (include "sys/epoll.h"
+	   "sys/ioctl.h")
+
+  (constant (+FIONREAD+ "FIONREAD"))
+
   (constantenum
    (op :base-type :int :define-constants t)
    ((:+epoll-ctl-add+ "EPOLL_CTL_ADD"))
@@ -70,6 +75,4 @@
 
   (cstruct epoll-event "struct epoll_event"
 	   (events "events" :type :uint32)
-	   (data "data" :type :uint64))
-  
-  (include "sys/epoll.h"))
+	   (data "data" :type :uint64)))
