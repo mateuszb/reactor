@@ -15,6 +15,18 @@
   (maxevts :int)
   (timeout :int))
 
+(defcfun "ioctl" :int
+  (fd :int)
+  (request :uint32)
+  (result (:pointer :int32)))
+
+(defun rxbytes-available (sd)
+  (with-foreign-object (rxbytes :int32)
+    (let ((err (ioctl sd +FIONREAD+ rxbytes)))
+      (if (zerop err)
+	  (mem-ref rxbytes :int32)
+	  err))))
+
 (defun make-epoll ()
   (epoll-create1 0))
 
@@ -24,6 +36,13 @@
       (let ((evt-mask (reduce #'logior evts)))
 	(setf events evt-mask data fd)
 	(epoll-ctl epollfd +EPOLL-CTL-ADD+ fd evt)))))
+
+(defun epoll-mod (epollfd fd evts)
+  (with-foreign-object (evt '(:struct epoll-event))
+    (with-foreign-slots ((events data) evt (:struct epoll-event))
+      (let ((evt-mask (reduce #'logior evts)))
+	(setf events evt-mask data fd)
+	(epoll-ctl epollfd +EPOLL-CTL-MOD+ fd evt)))))
 
 (defun epoll-del (epollfd fd)
   (epoll-ctl epollfd +EPOLL-CTL-DEL+ fd (null-pointer)))
@@ -48,4 +67,5 @@
 		   (concatenate
 		    'list
 		    (list :fd data :filter (cdr flag)
+			  :bytes-in (rxbytes-available data)
 			  :flags (bits->flags events))))))))))
