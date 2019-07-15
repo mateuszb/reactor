@@ -47,6 +47,29 @@
 
 #+linux
 (progn
-  ;;; i'm not on linux, so this code is automatically disabled by IDE highlighter
-  ;;; and it will also never be evaluated/compiled on macosx
-)
+  (in-package :reactor.epoll)
+
+  (constantenum
+   (op :base-type :int :define-constants t)
+   ((:+epoll-ctl-add+ "EPOLL_CTL_ADD"))
+   ((:+epoll-ctl-del+ "EPOLL_CTL_DEL"))
+   ((:+epoll-ctl-mod+ "EPOLL_CTL_MOD")))
+
+  (constantenum
+   (event :base-type :uint32 :define-constants t)
+   ((:+epollin+ "EPOLLIN"))
+   ((:+epollout+ "EPOLLOUT"))
+   ((:+epollrdhup+ "EPOLLRDHUP"))
+   ((:+epollpri+ "EPOLLPRI"))
+   ((:+epollerr+ "EPOLLERR"))
+   ((:+epollhup+ "EPOLLHUP"))
+   ((:+epollet+ "EPOLLET"))
+   ((:+epolloneshot+ "EPOLLONESHOT"))
+   ((:+epollwakeup+ "EPOLLWAKEUP"))
+   ((:+epollexclusive+ "EPOLLEXCLUSIVE")))
+
+  (cstruct epoll-event "struct epoll_event"
+	   (events "events" :type :uint32)
+	   (data "data" :type :uint64))
+  
+  (include "sys/epoll.h"))

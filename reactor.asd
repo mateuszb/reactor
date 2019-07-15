@@ -6,9 +6,12 @@
   :serial t
   :depends-on ("cl+ssl"
 	       "base64"
-	       "cffi")
+	       "cffi"
+	       "cffi-grovel")
   :components ((:file "packages")
 	       (:cffi-grovel-file "grovel" :depends-on ("packages"))
-	       (:file "kqueue" :depends-on ("grovel"))
-	       (:file "reactor" :depends-on ("kqueue")))
+	       #+os-macosx (:file "kqueue" :depends-on ("grovel"))
+	       #+linux (:file "epoll" :depends-on ("grovel"))
+	       (:file "reactor" :depends-on
+		      (#+os-macosx "kqueue" #+linux "epoll")))
   :description "epoll/kqueue reactor library")

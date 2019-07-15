@@ -1,54 +1,51 @@
 (in-package :reactor.epoll)
 
-(defcfun "kqueue" :int
-  "Create kqueue descriptor")
+(defcfun (epoll-create1 "epoll_create1") :int
+  (flags :int))
 
-(defcfun "kevent64" :int
-  (kq :int)
-  (changelist (:pointer kevent64_s))
-  (nchanges :int)
-  (eventlist (:pointer kevent64_s))
-  (nevents :int)
-  (flags :uint32)
-  (timespec (:pointer timespec)))
+(defcfun (epoll-ctl "epoll_ctl") :int
+  (epollfd :int)
+  (op :int)
+  (fd :int)
+  (event (:pointer epoll-event)))
 
-(defun make-kqueue ()
-  (kqueue))
+(defcfun (epoll-wait "epoll_wait") :int
+  (epollfd :int)
+  (event (:pointer epoll-event))
+  (maxevts :int)
+  (timeout :int))
 
-(defun kqueue-add (kfd fd evt-filter &optional (evt-udata nil))
-  (with-foreign-object (changelist '(:struct kevent64_s))
-    (with-foreign-slots
-	((ident filter flags fflags data udata ext) changelist (:struct kevent64_s))
+(defun make-epoll ()
+  (epoll-create1 0))
 
-      (setf ident fd
-	    filter evt-filter
-	    flags +EV-ADD+
-	    fflags 0
-	    data 0
-	    udata (if evt-udata evt-udata 0)
-	    (mem-aref ext :uint64) 0
-	    (mem-aref ext :uint64 1) 0)
+(defun epoll-add (epollfd fd evts)
+  (with-foreign-object (evt '(:struct epoll-event))
+    (with-foreign-slots ((events data) evt (:struct epoll-event))
+      (let ((evt-mask (reduce #'logior evts)))
+	(setf events evt-mask data fd)
+	(epoll-ctl epollfd +EPOLL-CTL-ADD+ fd evt)))))
 
-      (kevent64 kfd changelist 1 (null-pointer) 0 KEVENT-FLAG-IMMEDIATE (null-pointer)))))
+(defun epoll-del (epollfd fd)
+  (epoll-ctl epollfd +EPOLL-CTL-DEL+ fd (null-pointer)))
 
-(defun kqueue-del (kfd fd evt-filter)
-  (with-foreign-object (changelist '(:struct kevent64_s))
-    (with-foreign-slots ((ident filter flags) changelist (:struct kevent64_s))
-      (setf ident fd filter evt-filter flags +EV-DELETE+)
-      (kevent64 kfd changelist 1 (null-pointer) 0 KEVENT-FLAG-IMMEDIATE (null-pointer)))))
+(defun bits->flags (bitmask)
+  (loop for flag in (list +EPOLLRDHUP+ +EPOLLPRI+ +EPOLLERR+ +EPOLLHUP+)
+     for sym in '(:+EPOLLRDHUP+ :+EPOLLPRI+ :+EPOLLERR+ :+EPOLLHUP)
+     when (= flag (logand bitmask flag)) collect sym))
 
-(defun kqueue-events (kfd &optional (max-evts 128))
-  (with-foreign-object (evtlist '(:struct kevent64_s) max-evts)
-    (let ((nevts (kevent64 kfd (null-pointer) 0
-			   evtlist max-evts
-			   KEVENT-FLAG-IMMEDIATE (null-pointer))))
+(defun epoll-events (epollfd &optional (max-evts 128))
+  (with-foreign-object (evtlist '(:struct epoll-event) max-evts)
+    (let ((nevts (epoll-wait epollfd evtlist max-evts 0)))
       (loop for i from 0 below nevts
-	 for evt = (mem-aptr evtlist '(:struct kevent64_s) i)
-	 then (mem-aptr evtlist '(:struct kevent64_s) i)
+	 for evt = (mem-aptr evtlist '(:struct epoll-event) i)
+	 then (mem-aptr evtlist '(:struct epoll-event) i)
 	 collect
-	   (with-foreign-slots ((ident filter flags fflags data udata ext) evt (:struct kevent64_s))
-	     (concatenate 'list
-			  (list :fd ident :filter filter :udata udata)
-			  (case filter
-			    (:+EVFILT-READ+  (list :rx-avail data))
-			    (:+EVFILT-WRITE+ (list :tx-buf-left data)))))))))
+	   (car
+	    (with-foreign-slots ((events data) evt (:struct epoll-event))
+	      (loop for flag in (list (cons +EPOLLIN+ :in) (cons +EPOLLOUT+ :out))
+		 when (= (car flag) (logand events (car flag)))
+		 collect
+		   (concatenate
+		    'list
+		    (list :fd data :filter (cdr flag)
+			  :flags (bits->flags events))))))))))
