@@ -68,5 +68,5 @@
 			  (list :fd ident :filter filter :udata udata
 				:flags (flags->list flags) :fflags fflags)
 			  (case filter
-			    (+EVFILT-READ+  (list :rx-avail data))
-			    (+EVFILT-WRITE+ (list :tx-buf-left data)))))))))
+			    (+EVFILT-READ+  (list :bytes-in data))
+			    (+EVFILT-WRITE+ (list :bytes-out data)))))))))
