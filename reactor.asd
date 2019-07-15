@@ -12,6 +12,6 @@
 	       (:cffi-grovel-file "grovel" :depends-on ("packages"))
 	       #+os-macosx (:file "kqueue" :depends-on ("grovel"))
 	       #+linux (:file "epoll" :depends-on ("grovel"))
-	       (:file "reactor" :depends-on
-		      (#+os-macosx "kqueue" #+linux "epoll")))
+	       (:file "reactor" :depends-on (#+os-macosx "kqueue" #+linux "epoll"))
+	       (:file "dispatch" :depends-on ("reactor" "packages")))
   :description "epoll/kqueue reactor library")
