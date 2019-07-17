@@ -5,7 +5,7 @@
 
 (in-package :reactor-test)
 
-(plan 4)
+(plan 8)
 
 (progn
   (let ((srv-socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
@@ -49,7 +49,9 @@
   (sb-bsd-sockets:socket-close srv-socket))
 
 (let ((srv-socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
-      (cli-socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)))
+      (cli-socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
+      (rxbytes 0)
+      (rxbuf (make-array 32 :element-type '(unsigned-byte 8))))
 
   (setf (sb-bsd-sockets:sockopt-reuse-address srv-socket) t)
   (setf (sb-bsd-sockets:non-blocking-mode srv-socket) t
@@ -62,25 +64,32 @@
     (let ((newsock nil))
       (labels ((acceptor ()
 		 (setf newsock (sb-bsd-sockets:socket-accept srv-socket))
-		 (format t "accepted new socket ~a~%" newsock)
-		 (on-read newsock (lambda () (format t "rx!~%")))
+		 (setf (sb-bsd-sockets:non-blocking-mode newsock) t)
+		 (on-read newsock
+			  (lambda ()
+			    (multiple-value-bind (buf len peer) (sb-bsd-sockets:socket-receive newsock rxbuf 32)
+			      (declare (ignorable peer buf))
+			      (incf rxbytes len))))
 		 newsock))
 	(on-read srv-socket #'acceptor))
 
-      (on-write cli-socket (lambda ()
-			     (format t "write callback~%")
-			     (sb-bsd-sockets:socket-send cli-socket "test" 4)))
+      (on-write cli-socket (lambda () (sb-bsd-sockets:socket-send cli-socket "test" 4)))
       
       ;; connect the client
       (handler-case (sb-bsd-sockets:socket-connect cli-socket #(127 0 0 1) 31337)
 	(sb-bsd-sockets:operation-in-progress () t))
 
       (let ((evts (wait-for-events)))
-	(format t "EVENTS=~a~%" evts)
 	(is (getf (second evts) :filter) :in)
 	(dispatch-events evts)
 	(dispatch-events (wait-for-events)))
 
+      (is rxbytes 4)
+      (is (map 'string #'code-char (subseq rxbuf 0 4)) "test")
+      (sb-bsd-sockets:socket-send cli-socket "test2" 5)
+      (dispatch-events (wait-for-events))
+      (is rxbytes 9)
+      (is (map 'string #'code-char (subseq rxbuf 0 5)) "test2")
       (is (not (null newsock)) t)
       (when newsock
 	(sb-bsd-sockets:socket-close newsock))))
@@ -89,4 +98,3 @@
   (sb-bsd-sockets:socket-close srv-socket))
 
 (finalize)
-

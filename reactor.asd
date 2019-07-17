@@ -2,9 +2,7 @@
   :version "0.1.0"
   :author "Mateusz Berezecki"
   :license "BSD"
-  :depends-on ("cl+ssl"
-	       "base64"
-	       "cffi"
+  :depends-on ("cffi"
 	       "cffi-grovel")
   :defsystem-depends-on ("cffi-grovel")
   :serial t
