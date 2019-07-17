@@ -21,15 +21,28 @@
 	   :+EPOLLOUT+
 	   :+EPOLLET+))
 
-(defpackage reactor.dispatch
+(defpackage reactor
   (:use :cl
 	#+os-macosx
 	:reactor.kqueue
 	#+linux
 	:reactor.epoll)
+  (:export :reactor
+	   :*reactor*
+	   :context
+	   :with-reactor
+	   :make-reactor
+	   :reactor-handle
+	   :wait-for-events))
+
+(defpackage reactor.dispatch
+  (:use :cl :reactor
+	#+linux :reactor.epoll
+	#+os-macosx :reactor.kqueue)
   (:export :dispatcher
 	   :context
-	   :with-dispatcher
 	   :make-dispatcher
-	   :wait-for-events
-	   :on-read))
+	   :with-dispatcher
+	   :on-write
+	   :on-read
+	   :dispatch-events))
