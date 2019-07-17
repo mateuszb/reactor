@@ -64,8 +64,7 @@
 	      (loop for flag in (list (cons +EPOLLIN+ :in) (cons +EPOLLOUT+ :out))
 		 when (= (car flag) (logand events (car flag)))
 		 collect
-		   (concatenate
-		    'list
-		    (list :fd data :filter (cdr flag)
-			  :bytes-in (rxbytes-available data)
-			  :flags (bits->flags events))))))))))
+		   (list :fd data
+			 :filter (cdr flag)
+			 :bytes-in (rxbytes-available data)
+			 :flags (bits->flags events)))))))))
