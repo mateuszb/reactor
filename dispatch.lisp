@@ -7,6 +7,7 @@
   (reactor #+linux (make-reactor)))
 
 (defstruct context
+  socket
   rx-handler
   rx-evts
   tx-handler
@@ -28,7 +29,9 @@
 		    rx-evts (if replace-evts (list +EPOLLIN+ +EPOLLET+)
 				(union rx-evts (list +EPOLLIN+ +EPOLLET+))))
 	      (epoll-mod (reactor-handle r) sd (union tx-evts rx-evts)))
-	    (let ((ctx (make-context :rx-handler rxfun :rx-evts (list +EPOLLIN+ +EPOLLET+))))
+	    (let ((ctx (make-context :socket socket
+				     :rx-handler rxfun
+				     :rx-evts (list +EPOLLIN+ +EPOLLET+))))
 	      (let ((ret (epoll-add (reactor-handle r) sd (list +EPOLLIN+ +EPOLLET+))))
 		(if (zerop ret)
 		    (setf (gethash sd tab) ctx)
@@ -46,7 +49,9 @@
 				(union tx-evts (list +EPOLLOUT+ +EPOLLET+))))
 	      (epoll-mod (reactor-handle r) sd (union rx-evts tx-evts)))
 	    (progn
-	      (let ((ctx (make-context :rx-handler txfun :rx-evts (list +EPOLLOUT+ +EPOLLET+))))
+	      (let ((ctx (make-context :socket socket
+				       :rx-handler txfun
+				       :rx-evts (list +EPOLLOUT+ +EPOLLET+))))
 		(let ((ret (epoll-add (reactor-handle r) sd (list +EPOLLOUT+ +EPOLLET+))))
 		  (if (zerop ret)
 		      (setf (gethash sd tab) ctx)
@@ -61,6 +66,6 @@
 	 (when existsp
 	   (with-slots (rx-handler tx-handler) ctx
 	     (when rx-handler
-	       (funcall rx-handler))
+	       (funcall rx-handler ctx evt))
 	     (when tx-handler
-	       (funcall tx-handler)))))))
+	       (funcall tx-handler ctx evt)))))))

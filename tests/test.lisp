@@ -1,7 +1,6 @@
 (in-package :cl-user)
 (defpackage reactor-test
-  (:use :cl :prove :reactor :reactor.dispatch)
-  (:export :run! :all-tests :all-reactor-tests))
+  (:use :cl :prove :reactor :reactor.dispatch))
 
 (in-package :reactor-test)
 
@@ -62,18 +61,23 @@
 
   (with-dispatcher ((make-dispatcher))
     (let ((newsock nil))
-      (labels ((acceptor ()
+      (labels ((acceptor (ctx evt)
+		 (declare (ignore ctx evt))
 		 (setf newsock (sb-bsd-sockets:socket-accept srv-socket))
 		 (setf (sb-bsd-sockets:non-blocking-mode newsock) t)
 		 (on-read newsock
-			  (lambda ()
+			  (lambda (ctx evt)
+			    (declare (ignore ctx evt))
 			    (multiple-value-bind (buf len peer) (sb-bsd-sockets:socket-receive newsock rxbuf 32)
 			      (declare (ignorable peer buf))
 			      (incf rxbytes len))))
 		 newsock))
 	(on-read srv-socket #'acceptor))
 
-      (on-write cli-socket (lambda () (sb-bsd-sockets:socket-send cli-socket "test" 4)))
+      (on-write cli-socket
+		(lambda (ctx evt)
+		  (declare (ignore ctx evt))
+		  (sb-bsd-sockets:socket-send cli-socket "test" 4)))
       
       ;; connect the client
       (handler-case (sb-bsd-sockets:socket-connect cli-socket #(127 0 0 1) 31337)
