@@ -31,6 +31,7 @@
   (epoll-create1 0))
 
 (defun epoll-add (epollfd fd evts)
+  (format t "EPOLL-ADD: fd=~a, evts=~a~%" fd evts)
   (with-foreign-object (evt '(:struct epoll-event))
     (with-foreign-slots ((events data) evt (:struct epoll-event))
       (let ((evt-mask (reduce #'logior evts)))
@@ -38,6 +39,7 @@
 	(epoll-ctl epollfd +EPOLL-CTL-ADD+ fd evt)))))
 
 (defun epoll-mod (epollfd fd evts)
+  (format t "EPOLL-MOD: fd=~a, evts=~a~%" fd evts)
   (with-foreign-object (evt '(:struct epoll-event))
     (with-foreign-slots ((events data) evt (:struct epoll-event))
       (let ((evt-mask (reduce #'logior evts)))
@@ -45,6 +47,7 @@
 	(epoll-ctl epollfd +EPOLL-CTL-MOD+ fd evt)))))
 
 (defun epoll-del (epollfd fd)
+  (format t "EPOLL-DEL: fd=~a~%" fd)
   (epoll-ctl epollfd +EPOLL-CTL-DEL+ fd (null-pointer)))
 
 (defun bits->flags (bitmask)
@@ -52,9 +55,9 @@
      for sym in '(:+EPOLLRDHUP+ :+EPOLLPRI+ :+EPOLLERR+ :+EPOLLHUP)
      when (= flag (logand bitmask flag)) collect sym))
 
-(defun epoll-events (epollfd &optional (max-evts 128))
+(defun epoll-events (epollfd &optional (max-evts 128) (timeout -1))
   (with-foreign-object (evtlist '(:struct epoll-event) max-evts)
-    (let ((nevts (epoll-wait epollfd evtlist max-evts 0)))
+    (let ((nevts (epoll-wait epollfd evtlist max-evts timeout)))
       (loop for i from 0 below nevts
 	 for evt = (mem-aptr evtlist '(:struct epoll-event) i)
 	 then (mem-aptr evtlist '(:struct epoll-event) i)

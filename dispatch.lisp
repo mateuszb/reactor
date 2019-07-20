@@ -3,7 +3,7 @@
 (defvar *dispatcher*)
 
 (defstruct dispatcher
-  (socket->ctx-tab (make-hash-table))
+  (socktab (make-hash-table))
   (reactor #+linux (make-reactor)))
 
 (defstruct context
@@ -21,7 +21,7 @@
 (defun on-read (socket rxfun &optional (replace-evts nil))
   (let ((sd (sb-bsd-sockets:socket-file-descriptor socket)))
     #+linux
-    (with-slots ((tab socket->ctx-tab) (r reactor)) *dispatcher*
+    (with-slots ((tab socktab) (r reactor)) *dispatcher*
       (multiple-value-bind (ctx existsp) (gethash sd tab)
 	(if existsp
 	    (with-slots (rx-handler rx-evts tx-evts) ctx
@@ -40,7 +40,7 @@
 (defun on-write (socket txfun &optional (replace-evts nil))
   (let ((sd (sb-bsd-sockets:socket-file-descriptor socket)))
     #+linux
-    (with-slots ((tab socket->ctx-tab) (r reactor)) *dispatcher*
+    (with-slots ((tab socktab) (r reactor)) *dispatcher*
       (multiple-value-bind (ctx existsp) (gethash sd tab)
 	(if existsp
 	    (with-slots (tx-handler tx-evts rx-evts) ctx
@@ -57,15 +57,35 @@
 		      (setf (gethash sd tab) ctx)
 		      nil)))))))))
 
+(defun del-write (socket)
+  (let ((sd (sb-bsd-sockets:socket-file-descriptor socket)))
+    #+linux
+    (with-slots ((tab socktab) (r reactor)) *dispatcher*
+      (multiple-value-bind (ctx existsp) (gethash sd tab)
+	(when existsp
+	  (with-slots (tx-evts rx-evts) ctx
+	    (setf tx-evts (remove +EPOLLOUT+ tx-evts))
+	    (epoll-mod (reactor-handle r) sd (union rx-evts tx-evts))))))))
+
+(defun rem-socket (socket)
+  (let ((sd (sb-bsd-sockets:socket-file-descriptor socket)))
+    #+linux
+    (with-slots ((tab socktab) (r reactor)) *dispatcher*
+      (multiple-value-bind (ctx existsp) (gethash sd tab)
+	(declare (ignore ctx))
+	(when existsp
+	  (let ((err (epoll-del (reactor-handle r) sd)))
+	    (remhash sd tab)
+	    err))))))
 
 (defun dispatch-events (evts)
   (loop for evt in evts
-     with tab = (slot-value *dispatcher* 'socket->ctx-tab)
+     with tab = (slot-value *dispatcher* 'socktab)
      do
        (multiple-value-bind (ctx existsp) (gethash (getf evt :fd) tab)
 	 (when existsp
 	   (with-slots (rx-handler tx-handler) ctx
-	     (when rx-handler
+	     (when (and rx-handler (eq (getf evt :filter) :in))
 	       (funcall rx-handler ctx evt))
-	     (when tx-handler
+	     (when (and tx-handler (eq (getf evt :filter) :out))
 	       (funcall tx-handler ctx evt)))))))

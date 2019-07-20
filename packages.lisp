@@ -45,4 +45,6 @@
 	   :with-dispatcher
 	   :on-write
 	   :on-read
+	   :del-write
+	   :rem-socket
 	   :dispatch-events))
