@@ -2,7 +2,8 @@
   :version "0.1.0"
   :author "Mateusz Berezecki"
   :license "BSD"
-  :depends-on ("cffi"
+  :depends-on ("socket"
+	       "cffi"
 	       "cffi-grovel")
   :defsystem-depends-on ("cffi" "cffi-grovel")
   :serial t
