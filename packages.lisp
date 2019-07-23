@@ -36,7 +36,9 @@
 	   :wait-for-events))
 
 (defpackage reactor.dispatch
-  (:use :cl :reactor
+  (:use :cl
+	:reactor
+	:socket
 	#+linux :reactor.epoll
 	#+os-macosx :reactor.kqueue)
   (:export :dispatcher

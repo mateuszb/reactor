@@ -4,7 +4,7 @@
   :license "BSD"
   :depends-on ("cffi"
 	       "cffi-grovel")
-  :defsystem-depends-on ("cffi-grovel")
+  :defsystem-depends-on ("cffi" "cffi-grovel")
   :serial t
   :components ((:file "packages")
 	       (:cffi-grovel-file "grovel" :depends-on ("packages"))

@@ -9,10 +9,10 @@
   `(let ((*reactor* ,reactor))
      ,@body))
 
-(defun wait-for-events ()
+(defun wait-for-events (&optional (max-events 128) (timeout -1))
   #+linux
   (with-slots (handle) *reactor*
-    (epoll-events handle))
+    (epoll-events handle max-events timeout))
   #+os-macosx
   (with-slots (handle) *reactor*
     (kqueue-events handle)))
