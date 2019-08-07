@@ -15,18 +15,6 @@
   (maxevts :int)
   (timeout :int))
 
-(defcfun "ioctl" :int
-  (fd :int)
-  (request :uint32)
-  (result (:pointer :int32)))
-
-(defun rxbytes-available (sd)
-  (with-foreign-object (rxbytes :int32)
-    (let ((err (ioctl sd +FIONREAD+ rxbytes)))
-      (if (zerop err)
-	  (mem-ref rxbytes :int32)
-	  err))))
-
 (defun make-epoll ()
   (epoll-create1 0))
 
@@ -55,37 +43,40 @@
   (epoll-ctl epollfd +EPOLL-CTL-DEL+ fd (null-pointer)))
 
 (defun bits->flags (bitmask)
-  (loop for flag in (list +EPOLLRDHUP+ +EPOLLPRI+ +EPOLLERR+ +EPOLLHUP+)
-     for sym in '(:+EPOLLRDHUP+ :+EPOLLPRI+ :+EPOLLERR+ :+EPOLLHUP+)
+  (loop for flag in (list +EPOLLRDHUP+ +EPOLLPRI+ +EPOLLERR+ +EPOLLHUP+ +EPOLLET+ +EPOLLIN+ +EPOLLOUT+)
+     for sym in '(:+EPOLLRDHUP+ :+EPOLLPRI+ :+EPOLLERR+ :+EPOLLHUP+ :+EPOLLET+ :+EPOLLIN+ :+EPOLLOUT+)
      when (= flag (logand bitmask flag)) collect sym))
 
 (defun epoll-events (epollfd &optional (max-evts 128) (timeout -1))
   (with-foreign-object (evtlist '(:struct epoll-event) max-evts)
     (let ((nevts (epoll-wait epollfd evtlist max-evts timeout))
 	  (result '()))
-      (format t "epoll returned ~a~%" nevts)
       (loop for i from 0 below nevts
 	 for evt = (mem-aptr evtlist '(:struct epoll-event) i)
 	 then (mem-aptr evtlist '(:struct epoll-event) i)
 	 do
 	   (with-foreign-slots ((events data) evt (:struct epoll-event))
-	     (format t "event ~a/~a flags = ~a~%" i nevts events)
 	     (loop for direction in (list +EPOLLIN+ +EPOLLOUT+)
 		for filter in '(:in :out)
-		do
-		  (format t "checking direction ~x vs ~x~%" direction events)
 		when (= direction (logand events direction))
-		do
-		  (format t "result = ~x~%" (logand events direction))
-		and
 		collect
 		  (list :fd data
 			:filter filter
-			:bytes-in (rxbytes-available data)
 			:flags (bits->flags events))
 		into evtlist
 		finally
-		  (format t "tmp result=~a~%" evtlist)
 		  (loop for el in evtlist
 		     do (push el result)))))
       result)))
+
+(defun common-event-mask ()
+  (list +EPOLLET+ +EPOLLPRI+ +EPOLLERR+ +EPOLLRDHUP+ +EPOLLHUP+))
+
+(defun read-event-mask ()
+  (cons +EPOLLIN+ (common-event-mask)))
+
+(defun write-event-mask ()
+  (cons +EPOLLOUT+ (common-event-mask)))
+
+(defun rw-event-mask ()
+  (union (read-event-mask) (write-event-mask)))

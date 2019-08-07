@@ -17,7 +17,15 @@
 	   :epoll-del
 	   :epoll-add
 	   :epoll-mod
+	   :common-event-mask
+	   :read-event-mask
+	   :write-event-mask
+	   :rw-event-mask
 	   :+EPOLLIN+
+	   :+EPOLLPRI+
+	   :+EPOLLRDHUP+
+	   :+EPOLLHUP+
+	   :+EPOLLERR+
 	   :+EPOLLOUT+
 	   :+EPOLLET+))
 
@@ -47,6 +55,7 @@
 	   :with-dispatcher
 	   :on-write
 	   :on-read
+	   :on-disconnect
 	   :del-write
 	   :rem-socket
 	   :dispatch-events))
