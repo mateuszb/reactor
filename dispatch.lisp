@@ -67,7 +67,7 @@
 	      (let ((ctx (make-context :socket socket
 				       :tx-handler txfun
 				       :tx-evts (write-event-mask))))
-		(let ((ret (epoll-add (reactor-handle r) sd )))
+		(let ((ret (epoll-add (reactor-handle r) sd (write-event-mask))))
 		  (when (= ret -1)
 		    (error "epoll-add write error"))
 		  (if (zerop ret)
