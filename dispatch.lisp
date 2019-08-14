@@ -66,7 +66,7 @@
 	    (progn
 	      (let ((ctx (make-context :socket socket
 				       :tx-handler txfun
-				       :tx-events (write-event-mask))))
+				       :tx-evts (write-event-mask))))
 		(let ((ret (epoll-add (reactor-handle r) sd )))
 		  (when (= ret -1)
 		    (error "epoll-add write error"))
