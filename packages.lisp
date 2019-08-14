@@ -50,6 +50,7 @@
 	#+linux :reactor.epoll
 	#+os-macosx :reactor.kqueue)
   (:export :dispatcher
+	   :context-data
 	   :context
 	   :make-dispatcher
 	   :with-dispatcher

@@ -12,7 +12,8 @@
   rx-evts
   tx-handler
   tx-evts
-  disconnect-handler)
+  disconnect-handler
+  data)
 
 (defmacro with-dispatcher ((dispatcher) &body body)
   `(let ((*dispatcher* ,dispatcher))
