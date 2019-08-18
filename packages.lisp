@@ -58,5 +58,6 @@
 	   :on-read
 	   :on-disconnect
 	   :del-write
+	   :del-read
 	   :rem-socket
 	   :dispatch-events))

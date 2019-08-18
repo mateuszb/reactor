@@ -86,6 +86,17 @@
 	    (when (= (epoll-mod (reactor-handle r) sd (union rx-evts tx-evts)) -1)
 	      (error "epoll-mod del write error"))))))))
 
+(defun del-read (socket)
+  (let ((sd (socket-fd socket)))
+    #+linux
+    (with-slots ((tab socktab) (r reactor)) *dispatcher*
+      (multiple-value-bind (ctx existsp) (gethash sd tab)
+	(when existsp
+	  (with-slots (tx-evts rx-evts) ctx
+	    (setf tx-evts (remove +EPOLLIN+ tx-evts))
+	    (when (= (epoll-mod (reactor-handle r) sd (union rx-evts tx-evts)) -1)
+	      (error "epoll-mod del read error"))))))))
+
 (defun rem-socket (socket)
   (let ((sd (socket-fd socket)))
     #+linux
