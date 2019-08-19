@@ -60,4 +60,5 @@
 	   :del-write
 	   :del-read
 	   :rem-socket
-	   :dispatch-events))
+	   :dispatch-events
+	   :context-socket))
