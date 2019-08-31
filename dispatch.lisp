@@ -120,7 +120,9 @@
        #+debug
        (format t "dispatching event ~a~%" evt)
        (multiple-value-bind (ctx existsp) (gethash (getf evt :fd) tab)
-	 (if (member :+EPOLLRDHUP+ (getf evt :flags))
+	 (if (or (member :EPOLLRDHUP (getf evt :flags))
+		 (member :EPOLLHUP (getf evt :flags))
+		 (member :EPOLLERR (getf evt :flags)))
 	     (push (cons ctx evt) failed)
 	     (when existsp
 	       (with-slots (rx-handler tx-handler) ctx

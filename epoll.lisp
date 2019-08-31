@@ -44,7 +44,7 @@
 
 (defun bits->flags (bitmask)
   (loop for flag in (list +EPOLLRDHUP+ +EPOLLPRI+ +EPOLLERR+ +EPOLLHUP+ +EPOLLET+ +EPOLLIN+ +EPOLLOUT+)
-     for sym in '(:+EPOLLRDHUP+ :+EPOLLPRI+ :+EPOLLERR+ :+EPOLLHUP+ :+EPOLLET+ :+EPOLLIN+ :+EPOLLOUT+)
+     for sym in '(:EPOLLRDHUP :EPOLLPRI :EPOLLERR :EPOLLHUP :EPOLLET :EPOLLIN :EPOLLOUT)
      when (= flag (logand bitmask flag)) collect sym))
 
 (defun epoll-events (epollfd &optional (max-evts 128) (timeout -1))

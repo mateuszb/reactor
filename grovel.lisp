@@ -53,6 +53,7 @@
 	   "sys/ioctl.h")
 
   (constant (+FIONREAD+ "FIONREAD"))
+  (cvar ("errno" *errno*) :int)
 
   (constantenum
    (op :base-type :int :define-constants t)
