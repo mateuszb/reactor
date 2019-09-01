@@ -41,7 +41,8 @@
 	   :with-reactor
 	   :make-reactor
 	   :reactor-handle
-	   :wait-for-events))
+	   :wait-for-events
+	   :close-reactor))
 
 (defpackage reactor.dispatch
   (:use :cl
@@ -62,4 +63,5 @@
 	   :rem-socket
 	   :dispatch-events
 	   :context-socket
-	   :*dispatcher*))
+	   :close-dispatcher
+	   :dispatcher-reactor))
