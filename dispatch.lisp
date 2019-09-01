@@ -3,7 +3,7 @@
 (defvar *dispatcher*)
 
 (defstruct dispatcher
-  (socktab (make-hash-table))
+  (socktab (make-hash-table :synchronized t))
   (reactor #+linux (make-reactor)))
 
 (defstruct context
@@ -26,10 +26,34 @@
     (with-slots ((tab socktab) (r reactor)) *dispatcher*
       (multiple-value-bind (ctx existsp) (gethash sd tab)
 	(if existsp
-	    (with-slots (disconnect-handler) ctx
-	      (setf disconnect-handler handler))
-	    (let ((ctx (make-context :socket socket :disconnect-handler handler)))
-	      (setf (gethash sd tab) ctx)))))))
+	    (with-slots (disconnect-handler rx-evts tx-evts) ctx
+	      (setf disconnect-handler handler
+		    rx-evts (read-event-mask))
+
+	      (when (= -1 (epoll-mod (reactor-handle r) sd (union tx-evts rx-evts)))
+		(error "epoll-mod error")))
+	    (let ((ctx (make-context :socket socket
+				     :disconnect-handler handler
+				     :rx-evts (read-event-mask))))
+	      (let ((ret (epoll-add (reactor-handle r) sd (read-event-mask))))
+		(when (= ret -1)
+		  (error "epoll-add error"))
+		(if (zerop ret)
+		    (setf (gethash sd tab) ctx)
+		    nil))))))))
+
+(defun close-all-descriptors ()
+  (loop for s being the hash-key in (dispatcher-socktab *dispatcher*)
+     using (hash-value ctx)
+     do
+       (ignore-errors
+	 (rem-socket s)
+	 (disconnect s))))
+
+(defun close-dispatcher (dispatcher)
+  (with-dispatcher (dispatcher)
+    (close-all-descriptors)
+    (close-reactor (dispatcher-reactor dispatcher))))
 
 (defun on-read (socket rxfun)
   (let ((sd (socket-fd socket)))
@@ -60,10 +84,13 @@
       (multiple-value-bind (ctx existsp) (gethash sd tab)
 	(if existsp
 	    (with-slots (tx-handler tx-evts rx-evts) ctx
+	      (format t "socket already in the table~%")
 	      (setf tx-handler txfun
 		    tx-evts (write-event-mask))
-	      (when (= (epoll-mod (reactor-handle r) sd (union rx-evts tx-evts)) -1)
-		(error "epoll-mod write error")))
+	      (let ((err (epoll-mod (reactor-handle r) sd (union rx-evts tx-evts))))
+		(when (= err -1)
+		  (format t "errno=~a~%" reactor.epoll::*errno*)
+		  (error "epoll-mod write error"))))
 	    (progn
 	      (let ((ctx (make-context :socket socket
 				       :tx-handler txfun
