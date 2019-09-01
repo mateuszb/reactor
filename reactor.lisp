@@ -16,3 +16,6 @@
   #+os-macosx
   (with-slots (handle) *reactor*
     (kqueue-events handle)))
+
+(defun close-reactor (reactor)
+  (sb-posix:close (reactor-handle reactor)))
