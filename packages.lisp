@@ -53,6 +53,7 @@
   (:export :dispatcher
 	   :context-data
 	   :context
+	   :make-context
 	   :make-dispatcher
 	   :with-dispatcher
 	   :on-write
@@ -64,4 +65,5 @@
 	   :dispatch-events
 	   :context-socket
 	   :close-dispatcher
-	   :dispatcher-reactor))
+	   :dispatcher-reactor
+	   :socket-context))
