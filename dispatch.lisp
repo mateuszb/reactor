@@ -164,7 +164,7 @@
 	 (if (or (member :EPOLLRDHUP (getf evt :flags))
 		 (member :EPOLLHUP (getf evt :flags))
 		 (member :EPOLLERR (getf evt :flags)))
-	     (push (cons ctx evt) failed)
+	     (pushnew (list (getf evt :fd) ctx evt) failed :test #'= :key #'car)
 	     (when existsp
 	       (with-slots (rx-handler tx-handler) ctx
 		 (when (and rx-handler (eq (getf evt :filter) :in))
@@ -173,8 +173,8 @@
 		   (funcall tx-handler ctx evt))))))
      finally
        (mapcar (lambda (x)
-		 (let ((ctx (first x))
-		       (evt (second x)))
+		 (let ((ctx (second x))
+		       (evt (third x)))
 		   (with-slots (disconnect-handler) ctx
 		     (when disconnect-handler
 		       (funcall disconnect-handler ctx evt)))))
