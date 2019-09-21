@@ -3,6 +3,7 @@
   :author "Mateusz Berezecki"
   :license "BSD"
   :depends-on ("socket"
+	       "prove"
 	       "cffi"
 	       "cffi-grovel")
   :defsystem-depends-on ("cffi" "cffi-grovel")
