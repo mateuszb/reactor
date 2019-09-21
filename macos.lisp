@@ -1,4 +1,4 @@
-(in-package :reactor.kqueue)
+(in-package :reactor.macos)
 
 (defcfun "kqueue" :int
   "Create kqueue descriptor")

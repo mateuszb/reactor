@@ -9,9 +9,16 @@
     :serial t
     :components ((:file "packages")
 		 (:cffi-grovel-file "grovel" :depends-on ("packages"))
-		 #+os-macosx (:file "kqueue" :depends-on ("grovel"))
-		 #+linux (:file "epoll" :depends-on ("grovel"))
-		 (:file "reactor" :depends-on (#+os-macosx "kqueue" #+linux "epoll"))
+		 #+os-macosx (:file "macos" :depends-on ("grovel"))
+		 #+linux (:file "linux" :depends-on ("grovel"))
+		 (:file "reactor"
+			:depends-on
+			(#+os-macosx
+			 "macos"
+			 #+linux
+			 "linux"
+			 #+freebsd
+			 "freebsd"))
 		 (:file "dispatch" :depends-on ("reactor")))
     :in-order-to ((test-op (test-op "reactor/test")))
     :description "epoll/kqueue reactor library")

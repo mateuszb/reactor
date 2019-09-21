@@ -1,6 +1,6 @@
 #+os-macosx
 (progn
-  (in-package :reactor.kqueue)
+  (in-package :reactor.macos)
 
   (include "sys/types.h"
 	   "sys/event.h"

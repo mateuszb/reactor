@@ -2,7 +2,7 @@
   (:use :cl))
 
 #+os-macosx
-(defpackage reactor.kqueue
+(defpackage reactor.macos
   (:use :cl :cffi)
   (:export :make-kqueue
 	   :kqueue-add
@@ -10,7 +10,7 @@
 	   :kqueue-events))
 
 #+linux
-(defpackage reactor.epoll
+(defpackage reactor.linux
   (:use :cl :cffi)
   (:export :make-epoll
 	   :epoll-events
@@ -32,7 +32,9 @@
 (defpackage reactor
   (:use :cl
 	#+os-macosx
-	:reactor.kqueue
+	:reactor.macos
+	#+freebsd
+	:reactor.freebsd
 	#+linux
 	:reactor.epoll)
   (:export :reactor
@@ -48,8 +50,12 @@
   (:use :cl
 	:reactor
 	:socket
-	#+linux :reactor.epoll
-	#+os-macosx :reactor.kqueue)
+	#+linux
+	:reactor.linux
+	#+os-macosx
+	:reactor.macos
+	#+freebsd
+	:reactor.freebsd)
   (:export :dispatcher
 	   :context-data
 	   :context
