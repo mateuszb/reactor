@@ -11,6 +11,7 @@
 		 (:cffi-grovel-file "grovel" :depends-on ("packages"))
 		 #+os-macosx (:file "macos" :depends-on ("grovel"))
 		 #+linux (:file "linux" :depends-on ("grovel"))
+		 #+freebsd (:file "freebsd" :depends-on ("grovel"))
 		 (:file "reactor"
 			:depends-on
 			(#+os-macosx
@@ -25,7 +26,8 @@
 
 (defsystem "reactor/test"
     :depends-on ("prove-asdf"
-		 "prove")
+		 "prove"
+		 "alien-ring")
     :defsystem-depends-on (:prove-asdf)
     :serial t
     :components ((:module "tests" :components ((:test-file "test"))))

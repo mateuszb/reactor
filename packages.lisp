@@ -1,13 +1,30 @@
-(defpackage reactor
-  (:use :cl))
-
 #+os-macosx
 (defpackage reactor.macos
   (:use :cl :cffi)
   (:export :make-kqueue
 	   :kqueue-add
 	   :kqueue-del
-	   :kqueue-events))
+	   :kqueue-events
+	   :filter->enum
+	   :platform->universal-filter
+	   :platform->universal-flag
+	   :platform->universal-event	   
+	   ))
+
+#+freebsd
+(defpackage reactor.freebsd
+  (:use :cl :cffi)
+  (:export :make-kqueue
+	   :kqueue-add
+	   :kqueue-del
+	   :kqueue-events
+	   :read-event-flags
+	   :write-event-flags
+	   :filter->enum
+	   :platform->universal-filter
+	   :platform->universal-flag
+	   :platform->universal-event	   
+	   ))
 
 #+linux
 (defpackage reactor.linux
@@ -17,17 +34,20 @@
 	   :epoll-del
 	   :epoll-add
 	   :epoll-mod
-	   :common-event-mask
-	   :read-event-mask
-	   :write-event-mask
-	   :rw-event-mask
-	   :+EPOLLIN+
-	   :+EPOLLPRI+
-	   :+EPOLLRDHUP+
-	   :+EPOLLHUP+
-	   :+EPOLLERR+
-	   :+EPOLLOUT+
-	   :+EPOLLET+))
+	   :read-event-flags
+	   :write-event-flags
+	   :EPOLLIN
+	   :EPOLLPRI
+	   :EPOLLRDHUP
+	   :EPOLLHUP
+	   :EPOLLERR
+	   :EPOLLOUT
+	   :EPOLLET
+	   :filter->enum
+	   :platform->universal-filter
+	   :platform->universal-flag
+	   :platform->universal-event
+	   ))
 
 (defpackage reactor
   (:use :cl
@@ -44,7 +64,14 @@
 	   :make-reactor
 	   :reactor-handle
 	   :wait-for-events
-	   :close-reactor))
+	   :reactor-remove
+	   :reactor-add
+	   :reactor-modify
+	   :reactor-remove-socket
+	   :close-reactor
+	   :filter->enum)
+  (:import-from :socket
+		:socket-fd))
 
 (defpackage reactor.dispatch
   (:use :cl

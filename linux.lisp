@@ -18,32 +18,29 @@
 (defun make-epoll ()
   (epoll-create1 0))
 
-(defun epoll-add (epollfd fd evts)
-  (format t "EPOLL-ADD: fd=~a, evts=~a~%" fd evts)
+(defun epoll-add (epollfd fd evt-filter evt-flags)
   (with-foreign-object (evt '(:struct epoll-event))
     (with-foreign-slots ((events data) evt (:struct epoll-event))
-      (let ((evt-mask (reduce #'logior evts)))
+      (let ((evt-mask (reduce #'logior evt-filter evt-flags)))
 	(setf events evt-mask data fd)
-	(epoll-ctl epollfd +EPOLL-CTL-ADD+ fd evt)))))
+	(epoll-ctl epollfd EPOLL-CTL-ADD fd evt)))))
 
-(defun epoll-mod (epollfd fd evts)
-  (format t "EPOLL-MOD: fd=~a, evts=~a~%" fd evts)
+(defun epoll-mod (epollfd fd evt-filter evt-flags)
   (with-foreign-object (evt '(:struct epoll-event))
     (with-foreign-slots ((events data) evt (:struct epoll-event))
-      (let ((evt-mask (reduce #'logior evts))
+      (let ((evt-mask (reduce #'logior evt-filter evt-flags))
 	    (err 0))
 	(setf events evt-mask data fd)
-	(setf err (epoll-ctl epollfd +EPOLL-CTL-MOD+ fd evt))
+	(setf err (epoll-ctl epollfd EPOLL-CTL-MOD fd evt))
 	(when (= err -1)
 	  (error "epoll mod write error"))
 	err))))
 
 (defun epoll-del (epollfd fd)
-  (format t "EPOLL-DEL: fd=~a~%" fd)
-  (epoll-ctl epollfd +EPOLL-CTL-DEL+ fd (null-pointer)))
+  (epoll-ctl epollfd EPOLL-CTL-DEL fd (null-pointer)))
 
 (defun bits->flags (bitmask)
-  (loop for flag in (list +EPOLLRDHUP+ +EPOLLPRI+ +EPOLLERR+ +EPOLLHUP+ +EPOLLET+ +EPOLLIN+ +EPOLLOUT+)
+  (loop for flag in (list EPOLLRDHUP EPOLLPRI EPOLLERR EPOLLHUP EPOLLET EPOLLIN EPOLLOUT)
      for sym in '(:EPOLLRDHUP :EPOLLPRI :EPOLLERR :EPOLLHUP :EPOLLET :EPOLLIN :EPOLLOUT)
      when (= flag (logand bitmask flag)) collect sym))
 
@@ -56,7 +53,7 @@
 	 then (mem-aptr evtlist '(:struct epoll-event) i)
 	 do
 	   (with-foreign-slots ((events data) evt (:struct epoll-event))
-	     (loop for direction in (list +EPOLLIN+ +EPOLLOUT+)
+	     (loop for direction in (list EPOLLIN EPOLLOUT)
 		for filter in '(:in :out)
 		when (= direction (logand events direction))
 		collect
@@ -69,14 +66,19 @@
 		     do (push el result)))))
       result)))
 
-(defun common-event-mask ()
-  (list +EPOLLET+ +EPOLLPRI+ +EPOLLERR+ +EPOLLRDHUP+ +EPOLLHUP+))
+(defun common-event-flags ()
+  (list EPOLLET EPOLLPRI EPOLLERR EPOLLRDHUP EPOLLHUP))
 
-(defun read-event-mask ()
-  (cons +EPOLLIN+ (common-event-mask)))
+(defun read-event-flags ()
+  (cons EPOLLIN (common-event-flags)))
 
-(defun write-event-mask ()
-  (cons +EPOLLOUT+ (common-event-mask)))
+(defun write-event-flags ()
+  (cons EPOLLOUT (common-event-flags)))
 
-(defun rw-event-mask ()
-  (union (read-event-mask) (write-event-mask)))
+(defun rw-event-flags ()
+  (union (read-event-flags) (write-event-flags)))
+
+(defun filter->enum (filter)
+  (ecase filter
+    (:in :EPOLLIN)
+    (:out :EPOLLOUT)))
