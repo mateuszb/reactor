@@ -63,7 +63,7 @@
 	 collect
 	   (with-foreign-slots ((ident filter flags fflags data udata ext) evt (:struct kevent64_s))
 	     (concatenate 'list
-			  (list :fd ident :filter filter :udata udata
+			  (list :handle ident :filter filter :udata udata
 				:flags (flags->list flags) :fflags fflags)
 			  (case filter
 			    (EVFILT-READ  (list :bytes-in data))
@@ -73,3 +73,9 @@
   (ecase filter
     (:in :evfilt-read)
     (:out :evfilt-write)))
+
+(defun flag->enum (flag)
+  (ecase flag
+    (:edge '(:EV-CLEAR))
+    (:eof '(:EV-EOF))
+    (:error '(:EV-ERROR))))

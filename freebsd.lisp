@@ -46,6 +46,12 @@
     (:in :evfilt-read)
     (:out :evfilt-write)))
 
+(defun flag->enum (flag)
+  (ecase flag
+    (:edge '(:EV-CLEAR))
+    (:eof '(:EV-EOF))
+    (:error '(:EV-ERROR))))
+
 (defun read-event-flags ()
   '(:EV-ENABLE :EV-EOF :EV-ADD :EV-CLEAR))
 
@@ -61,10 +67,11 @@
 	 collect
 	   (with-foreign-slots
 	       ((ident filter flags fflags data udata ext) evt (:struct kevent))
-	     (format t "EVENT: ident=~s, filter=~s, flags=~s~%" ident filter flags)
+	     (format t "EVENT: ident=~s, filter=~s, flags=~s~%"
+		     ident filter flags)
 	     (concatenate
 	      'list
-	      (list :fd ident :filter filter :udata udata
+	      (list :handle ident :filter filter :udata udata
 		    :flags flags :fflags fflags)
 	      (case filter
 		(:EVFILT-READ  (list :bytes-in data))
@@ -96,4 +103,3 @@
 				 when flg collect flg)))
 	      (setf (cadr elem) translated))))))
   event)
-       

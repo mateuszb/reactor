@@ -23,47 +23,85 @@
 
       (mapcar #'platform->universal-event evts))))
 
-(defun reactor-add (reactor socket filter flags)
-  (let ((translated-filter (filter->enum filter)))
-    #+linux
-    (epoll-add (reactor-handle reactor) (socket-fd socket) translated-filter flags)
-    #+freebsd
-    (kqueue-add (reactor-handle reactor) (socket-fd socket) translated-filter flags)
-    #+os-macosx
-    (kqueue-add (reactor-handle reactor) (socket-fd socket) translated-filter flags)))
+(defgeneric handle-key (handle))
 
-(defun reactor-remove (reactor socket filter)
-  (let ((translated-filter (filter->enum filter)))
+(defun reactor-add (reactor handle filters flags)
+  (let ((translated-filters (filters->enums filters))
+	(translated-flags (flags->enums flags)))
     #+linux
-    (epoll-del (reactor-handle reactor) (socket-fd socket) translated-filter)
-    #+os-macosx
-    (kqueue-del (reactor-handle reactor) (socket-fd socket) translated-filter)
+    (epoll-add
+     (reactor-handle reactor)
+     handle
+     translated-filters
+     translated-flags)
     #+freebsd
-    (kqueue-del (reactor-handle reactor) (socket-fd socket) translated-filter)))
+    (kqueue-add
+     (reactor-handle reactor)
+     handle
+     translated-filter translated-flags)
+    #+os-macosx
+    (kqueue-add
+     (reactor-handle reactor)
+     handle
+     translated-filter translated-flags)))
 
-(defun reactor-modify (reactor socket filter flags)
-  (let ((translated-filter (filter->enum event-filter)))
+(defun reactor-remove (reactor handle filters)
+  (let ((translated-filters (filters->enums filters)))
     #+linux
-    (epoll-mod (reactor-handle reactor) (socket-fd socket) translated-filter flags)
+    (epoll-del
+     (reactor-handle reactor)
+     handle)
     #+os-macosx
-    (kqueue-add (reactor-handle reactor) (socket-fd socket) translated-filter flags)
+    (kqueue-del
+     (reactor-handle reactor)
+     handle
+     translated-filters)
     #+freebsd
-    (kqueue-add (reactor-handle reactor) (socket-fd socket) translated-filter flags)))
+    (kqueue-del
+     (reactor-handle reactor)
+     handle
+     translated-filters)))
 
-;; potentialy not needed anymore
-(defun reactor-remove-socket (socket)
-  (let ((sd (socket-fd socket)))
-    (with-slots ((tab socktab) (r reactor)) *dispatcher*
-      (multiple-value-bind (ctx existsp) (gethash sd tab)
-	(declare (ignore ctx))
-	(when existsp
-	  (remhash sd tab)
-	  (let ((err (reactor-del (reactor-handle r) sd)))
-	    (when (= err -1)
-	      #+debug
-	      (format t "error: ~a~%" (socket::errno))
-	      (error "error when deleting socket"))
-	    err))))))
+(defun reactor-disable (reactor handle filters flags)
+  (let ((translated-filters (filters->enums filters))
+	(translated-flags (flags->enums flags)))
+    #+linux
+    (epoll-mod
+     (reactor-handle reactor)
+     handle
+     translated-filters
+     translated-flags)
+    #+os-macosx
+    (kqueue-del
+     (reactor-handle reactor)
+     handle translated-filter)
+    #+freebsd
+    (kqueue-del
+     (reactor-handle reactor)
+     handle translated-filter)))
+
+(defun reactor-modify (reactor handle filters flags)
+  (let ((translated-filters (filters->enums filters))
+	(translated-flags (flags->enums flags)))
+    (format t "reactor-modify: translated flags=~a~%" translated-flags)
+    #+linux
+    (epoll-mod
+     (reactor-handle reactor)
+     handle
+     translated-filters
+     translated-flags)
+    #+os-macosx
+    (kqueue-add
+     (reactor-handle reactor)
+     handle
+     translated-filter
+     translated-flags)
+    #+freebsd
+    (kqueue-add
+     (reactor-handle reactor)
+     handle
+     translated-filter
+     translated-flags)))
 
 (defun close-reactor (reactor)
   (sb-posix:close

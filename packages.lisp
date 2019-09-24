@@ -8,7 +8,7 @@
 	   :filter->enum
 	   :platform->universal-filter
 	   :platform->universal-flag
-	   :platform->universal-event	   
+	   :platform->universal-event
 	   ))
 
 #+freebsd
@@ -23,7 +23,7 @@
 	   :filter->enum
 	   :platform->universal-filter
 	   :platform->universal-flag
-	   :platform->universal-event	   
+	   :platform->universal-event
 	   ))
 
 #+linux
@@ -43,7 +43,8 @@
 	   :EPOLLERR
 	   :EPOLLOUT
 	   :EPOLLET
-	   :filter->enum
+	   :filters->enums
+	   :flags->enums
 	   :platform->universal-filter
 	   :platform->universal-flag
 	   :platform->universal-event
@@ -56,7 +57,7 @@
 	#+freebsd
 	:reactor.freebsd
 	#+linux
-	:reactor.epoll)
+	:reactor.linux)
   (:export :reactor
 	   :*reactor*
 	   :context
@@ -65,25 +66,15 @@
 	   :reactor-handle
 	   :wait-for-events
 	   :reactor-remove
+	   :reactor-disable
 	   :reactor-add
 	   :reactor-modify
 	   :reactor-remove-socket
 	   :close-reactor
-	   :filter->enum)
-  (:import-from :socket
-		:socket-fd))
-
-(defpackage reactor.dispatch
-  (:use :cl
-	:reactor
-	:socket
-	#+linux
-	:reactor.linux
-	#+os-macosx
-	:reactor.macos
-	#+freebsd
-	:reactor.freebsd)
-  (:export :dispatcher
+	   :filters->enums
+	   :flags->enums
+	   :dispatcher
+	   :*dispatcher*
 	   :context-data
 	   :context
 	   :make-context
@@ -94,9 +85,12 @@
 	   :on-disconnect
 	   :del-write
 	   :del-read
-	   :rem-socket
+	   :rem-handle
 	   :dispatch-events
-	   :context-socket
 	   :close-dispatcher
 	   :dispatcher-reactor
-	   :socket-context))
+	   :socket-context
+	   :context-handle
+	   :handle-key)
+  (:import-from :socket
+		:socket-fd))

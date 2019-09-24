@@ -47,7 +47,7 @@
 
 #+linux
 (progn
-  (in-package :reactor.epoll)
+  (in-package :reactor.linux)
 
   (include "sys/epoll.h"
 	   "sys/ioctl.h")

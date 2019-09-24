@@ -1,0 +1,8 @@
+#+TODO: TODO(t!) DOING(p!) | DONE(d!) CANCELED(c!)
+* TODO Finish debugging FreeBSD support
+* TODO Test macos support
+* DOING Fix a removal logic
+  - State "DOING"      from "TODO"       [2019-09-23 Mon 17:05]
+  - State "TODO"       from              [2019-09-23 Mon 17:05]
+** TODO Add support to disable specific notification direction on a socket
+** TODO Add support to remove a socket from the reactor entirely
