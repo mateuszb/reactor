@@ -14,37 +14,50 @@
 (defun make-kqueue ()
   (kqueue))
 
-(defun kqueue-add (kfd fd evt-filter evt-flags)
-  (format t ":: kqueue adding fd=~a, filter=~s, flags=~s~%"
-	  fd evt-filter evt-flags)
-  (with-foreign-object (changelist '(:struct kevent))
-    (with-foreign-slots
-	((ident filter flags fflags data udata ext) changelist (:struct kevent))
-      (setf ident fd
-	    filter evt-filter
-	    flags evt-flags
-	    fflags 0
-	    data 0
-	    udata (null-pointer)
-	    (mem-aref ext :uint64) 0
-	    (mem-aref ext :uint64 1) 0
-	    (mem-aref ext :uint64 2) 0
-	    (mem-aref ext :uint64 3) 0)
+(defun kqueue-add (kfd fd evt-filters evt-flags)
+  (declare (optimize (speed 0) (debug 3) (safety 3)))
+  (setf evt-flags (union evt-flags '(:EV-ADD :EV-ENABLE)))
+  (with-foreign-object (changelist '(:struct kevent) (length evt-filters))
+    (loop
+       for i from 0 below (length evt-filters)
+       for f in evt-filters
+       do
+	 (let ((kevt (mem-aptr changelist '(:struct kevent) i)))
+	   (with-foreign-slots ((ident filter flags fflags data udata ext) kevt (:struct kevent))
+	     (setf ident fd
+		   filter f
+		   flags evt-flags
+		   fflags 0
+		   data 0
+		   udata (null-pointer)
+		   (mem-aref ext :uint64) 0
+		   (mem-aref ext :uint64 1) 0
+		   (mem-aref ext :uint64 2) 0
+		   (mem-aref ext :uint64 3) 0))))
 
-      (kevent kfd changelist 1 (null-pointer) 0 (null-pointer)))))
+      (kevent kfd changelist (length evt-filters) (null-pointer) 0 (null-pointer))))
 
-(defun kqueue-del (kfd fd evt-filter)
-  (with-foreign-object (changelist '(:struct kevent))
-    (with-foreign-slots ((ident filter flags) changelist (:struct kevent))
-      (setf ident fd
-	    filter evt-filter
-	    flags :EV-DELETE)
-      (kevent kfd changelist 1 (null-pointer) 0 (null-pointer)))))
+(defun kqueue-del (kfd fd del-filters)
+  (with-foreign-object (changelist '(:struct kevent) (length del-filters))
+    (loop
+       for i from 0 below (length del-filters)
+       for f in del-filters
+       do
+	 (let ((kevt (mem-aptr changelist '(:struct kevent) i)))
+	   (with-foreign-slots ((ident filter flags) kevt (:struct kevent))
+	     (setf ident fd
+		   filter f
+		   flags :EV-DELETE))))
+
+      (kevent kfd changelist (length del-filters) (null-pointer) 0 (null-pointer))))
 
 (defun filter->enum (filter)
   (ecase filter
     (:in :evfilt-read)
     (:out :evfilt-write)))
+
+(defun filters->enums (filters)
+  (mapcar #'filter->enum filters))
 
 (defun flag->enum (flag)
   (ecase flag
@@ -52,11 +65,13 @@
     (:eof '(:EV-EOF))
     (:error '(:EV-ERROR))))
 
-(defun read-event-flags ()
-  '(:EV-ENABLE :EV-EOF :EV-ADD :EV-CLEAR))
+(defun flatten (ls)
+  (labels ((mklist (x) (if (listp x) x (list x))))
+    (mapcan #'(lambda (x) (if (atom x) (mklist x) (flatten x))) ls)))
 
-(defun write-event-flags ()
-  '(:EV-ENABLE :EV-EOF :EV-ADD :EV-CLEAR))
+(defun flags->enums (flags)
+  (flatten
+   (mapcar #'flag->enum flags)))
 
 (defun kqueue-events (kfd &optional (max-evts 128))
   (with-foreign-object (evtlist '(:struct kevent) max-evts)

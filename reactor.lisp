@@ -38,12 +38,14 @@
     (kqueue-add
      (reactor-handle reactor)
      handle
-     translated-filter translated-flags)
+     translated-filters
+     translated-flags)
     #+os-macosx
     (kqueue-add
      (reactor-handle reactor)
      handle
-     translated-filter translated-flags)))
+     translated-filters
+     translated-flags)))
 
 (defun reactor-remove (reactor handle filters)
   (let ((translated-filters (filters->enums filters)))
@@ -94,13 +96,13 @@
     (kqueue-add
      (reactor-handle reactor)
      handle
-     translated-filter
+     translated-filters
      translated-flags)
     #+freebsd
     (kqueue-add
      (reactor-handle reactor)
      handle
-     translated-filter
+     translated-filters
      translated-flags)))
 
 (defun close-reactor (reactor)

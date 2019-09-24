@@ -20,7 +20,8 @@
 	   :kqueue-events
 	   :read-event-flags
 	   :write-event-flags
-	   :filter->enum
+	   :filters->enums
+	   :flags->enums
 	   :platform->universal-filter
 	   :platform->universal-flag
 	   :platform->universal-event

@@ -99,7 +99,7 @@
    ((:ev-error    "EV_ERROR")))
 
   (constantenum
-   (kqueue-filter :base-type :int16 :define-constants t)
+   (kqueue-filter :base-type :int16)
    ((:evfilt-read   "EVFILT_READ"))
    ((:evfilt-write  "EVFILT_WRITE"))
    ((:evfilt-empty  "EVFILT_EMPTY"))

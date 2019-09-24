@@ -125,7 +125,7 @@
 		;; new filter list is empty. remove the handle from
 		;; the reactor set
 		((null new-filters)
-		 (reactor-remove reactor (handle-key handle) nil)
+		 (reactor-remove reactor (handle-key handle) filters)
 		 (remhash (handle-key handle) (dispatcher-handle-tab *dispatcher*)))
 
 		;; new filter list is not empty. update the handle in
