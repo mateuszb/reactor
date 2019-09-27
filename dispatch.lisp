@@ -73,44 +73,42 @@
       (reactor-add reactor (handle-key handle) filters flags))
 
     ;; check if the requested filters and flags are already associated
-    ;; with this context by taking their union and checking if the result
-    ;; is the same as current flags
+    ;; with this context
     (let* ((filters-present (filters ctx))
 	   (flags-present (flags ctx))
-	   (new-filters (union filters-present filters))
-	   (new-flags (union flags-present flags)))
+	   (new-filters (set-difference filters filters-present))
+	   (new-flags (set-difference flags flags-present)))
 
       (cond
-	;; if the filter is present and existing flags and filters are
-	;; equal to new flags, then do nothing
-	((and (equal new-filters (filters ctx))
-	      (equal new-flags (flags ctx)))
-	 (format t "equal case~%"))
+	;; if no new filters and flags are present, we only have to
+	;; check if the handler has changed
+	((and (null new-filters) (null new-flags))
+	 (let ((pairs (pairlis filters handlers)))
+	   (loop for existing-handler on (handlers ctx)
+	      when (assoc (caar existing-handler) pairs)
+	      do
+		(rplaca existing-handler (assoc (caar existing-handler) pairs)))))
 
-	;; if the filter is present but we have some new flags, we
-	;; need to modify the flags but otherwise we do nothing
-	((equal new-filters (filters ctx))
-	 (format t "modify case~%")
+	;; if there are only new flags present, we update the flags
+	((and (null new-filters) new-flags)
 	 ;; only update flags
-	 (setf (flags ctx) new-flags)
-	 (reactor-modify reactor (handle-key handle) new-filters new-flags))
+	 (setf (flags ctx) (union flags-present new-flags))
+	 (reactor-modify reactor (handle-key handle) (filters ctx) (flags ctx)))
 
 	;; filter is not present but the handle is in the set, we need
 	;; to add a new filter
-	((and foundp (not (equal new-filters (filters ctx))))
-	 (format t "new filter added case~%")
+	((and foundp (or new-filters new-flags))
 	 (let* ((pairs (mapcar #'cons filters handlers)))
 	   (dolist (h pairs)
 	     (unless (member (car h) (filters ctx))
 	       (push h (handlers ctx)))))
-	 (setf (filters ctx) new-filters)
-	 (setf (flags ctx) new-flags)
+	 (setf (filters ctx) (union filters-present new-filters))
+	 (setf (flags ctx) (union flags-present new-flags))
 
-	 (reactor-modify reactor (handle-key handle) new-filters new-flags))
+	 (reactor-modify reactor (handle-key handle) (filters ctx) (flags ctx)))
 
 	((and (not foundp)) ;; TODO: is this correct?
-	 (format t "not found case?~%")
-	 (reactor-add reactor (handle-key handle) new-filters new-flags))))))
+	 (reactor-add reactor (handle-key handle) (filters ctx) (flags ctx)))))))
 
 (defun del (reactor handle del-filters del-flags)
   (multiple-value-bind (ctx foundp) (get-context (handle-key handle))
@@ -173,7 +171,6 @@
     (loop for evt in evts
        with failed = '()
        do
-	 (format t "dispatching event ~s~%" evt)
 	 (multiple-value-bind (ctx existsp) (get-context (getf evt :handle))
 	   (let ((flags (getf evt :flags)))
 	     (when (or (is-eof-p flags) (is-error-p flags))
