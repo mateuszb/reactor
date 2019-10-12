@@ -23,6 +23,7 @@
     (with-foreign-slots ((events data) evt (:struct epoll-event))
       (let ((evt-mask (union evt-filters evt-flags)))
 	(setf events evt-mask data fd)
+	#+debug
 	(format t "EPOLL-ADD handle=~a, mask=~a, flags=~a~%" fd evt-mask evt-flags)
 	(epoll-ctl epollfd EPOLL-CTL-ADD fd evt)))))
 
@@ -32,6 +33,7 @@
       (let ((evt-mask (union evt-filters evt-flags))
 	    (err 0))
 	(setf events evt-mask data fd)
+	#+debug
 	(format t "EPOLL-MOD handle=~a, mask=~a, flags=~a~%" fd evt-mask evt-flags)
 	(setf err (epoll-ctl epollfd EPOLL-CTL-MOD fd evt))
 	(when (= err -1)
@@ -39,6 +41,7 @@
 	err))))
 
 (defun epoll-del (epollfd fd)
+  #+debug
   (format t "EPOLL-DEL handle=~a~%" fd)
   (epoll-ctl epollfd EPOLL-CTL-DEL fd (null-pointer)))
 
@@ -51,6 +54,7 @@
 	 then (mem-aptr evtlist '(:struct epoll-event) i)
 	 do
 	   (with-foreign-slots ((events data) evt (:struct epoll-event))
+	     #+debug
 	     (format t "EVENT: flags=~a~%" events)
 	     (labels ((remove-inout-flags (flags)
 			(remove :EPOLLIN (remove :EPOLLOUT flags)))
