@@ -186,7 +186,7 @@
 	 (dolist (elm failed)
 	   (let ((ctx (second elm))
 		 (evt (third elm)))
-	     (unless (cffi:null-pointer-p ctx)
+	     (unless ctx
 	       (with-slots (handlers) ctx
 		 (when (cdr (assoc :eof handlers))
 		   (funcall (cdr (assoc :eof handlers)) ctx evt)))))))))
