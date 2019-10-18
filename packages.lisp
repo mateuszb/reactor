@@ -5,7 +5,10 @@
 	   :kqueue-add
 	   :kqueue-del
 	   :kqueue-events
-	   :filter->enum
+	   :read-event-flags
+	   :write-event-flags
+	   :filters->enums
+	   :flags->enums
 	   :platform->universal-filter
 	   :platform->universal-flag
 	   :platform->universal-event

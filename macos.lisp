@@ -5,77 +5,116 @@
 
 (defcfun "kevent64" :int
   (kq :int)
-  (changelist (:pointer kevent64_s))
+  (changelist (:pointer (:struct kevent64_s)))
   (nchanges :int)
-  (eventlist (:pointer kevent64_s))
+  (eventlist (:pointer (:struct kevent64_s)))
   (nevents :int)
   (flags :uint32)
-  (timespec (:pointer timespec)))
+  (timespec (:pointer (:struct timespec))))
 
 (defun make-kqueue ()
   (kqueue))
 
-(defun kqueue-add (kfd fd evt-filter evt-flags)
-  (with-foreign-object (changelist '(:struct kevent64_s))
-    (with-foreign-slots
-	((ident filter flags fflags data udata ext) changelist (:struct kevent64_s))
-      (setf ident fd
-	    filter evt-filter
-	    flags evt-flags
-	    fflags 0
-	    data 0
-	    udata 0
-	    (mem-aref ext :uint64) 0
-	    (mem-aref ext :uint64 1) 0)
-      (kevent64 kfd changelist 1 (null-pointer) 0 KEVENT-FLAG-IMMEDIATE (null-pointer)))))
-
-(defun kqueue-del (kfd fd evt-filter)
-  (with-foreign-object (changelist '(:struct kevent64_s))
-    (with-foreign-slots ((ident filter flags) changelist (:struct kevent64_s))
-      (setf ident fd filter evt-filter flags EV-DELETE)
-      (kevent64 kfd changelist 1 (null-pointer) 0 KEVENT-FLAG-IMMEDIATE (null-pointer)))))
-
-(defun flags->list (bitmask)
-  (loop for flag in (list ev-add ev-enable ev-disable
-		      ev-delete ev-receipt ev-oneshot
-		      ev-clear ev-eof ev-ooband ev-error)
-       for symflag in '(:ev-add :ev-enable :ev-disable
-		      :ev-delete :ev-receipt :ev-oneshot
-		      :ev-clear :ev-eof :ev-ooband :ev-error)
-     when (= flag (logand bitmask flag)) collect symflag))
-
-(defun kqueue-events (kfd &optional (max-evts 128))
-  (with-foreign-object (evtlist '(:struct kevent64_s) max-evts)
-    (loop for i from 0 below max-evts
-       for evt = (mem-aptr evtlist '(:struct kevent64_s) i)
-       then (mem-aptr evtlist '(:struct kevent64_s) i)
+(defun kqueue-add (kfd fd evt-filters evt-flags)
+  (setf evt-flags (union evt-flags '(:EV-ADD :EV-ENABLE)))
+  (with-foreign-object (changelist '(:struct kevent64_s) (length evt-filters))
+    (loop
+       for i from 0 below (length evt-filters)
+       for f in evt-filters
        do
-	 (with-foreign-slots ((ident filter flags fflags data udata ext) evt (:struct kevent64_s))
-	   (setf flags 0 ident 0 data 0 fflags 0
-		 udata 0 (mem-aref ext :int64) 0
-		 (mem-aref ext :int64 1) 0)))
+	 (let ((kevt (mem-aptr changelist '(:struct kevent64_s) i)))
+	   (with-foreign-slots ((ident filter flags fflags data udata ext) kevt (:struct kevent64_s))
+	     (setf ident fd
+		   filter f
+		   flags evt-flags
+		   fflags 0
+		   data 0
+		   udata (null-pointer)
+		   (mem-aref ext :uint64) 0
+		   (mem-aref ext :uint64 1) 0))))
 
-    (let ((nevts (kevent64 kfd (null-pointer) 0 evtlist max-evts
-			   KEVENT-FLAG-IMMEDIATE (null-pointer))))
-      (loop for i from 0 below nevts
-	 for evt = (mem-aptr evtlist '(:struct kevent64_s) i)
-	 then (mem-aptr evtlist '(:struct kevent64_s) i)
-	 collect
-	   (with-foreign-slots ((ident filter flags fflags data udata ext) evt (:struct kevent64_s))
-	     (concatenate 'list
-			  (list :handle ident :filter filter :udata udata
-				:flags (flags->list flags) :fflags fflags)
-			  (case filter
-			    (EVFILT-READ  (list :bytes-in data))
-			    (EVFILT-WRITE (list :bytes-out data)))))))))
+    (kevent64 kfd changelist (length evt-filters) (null-pointer) 0 KEVENT-FLAG-IMMEDIATE (null-pointer))))
+
+(defun kqueue-del (kfd fd del-filters)
+  (with-foreign-object (changelist '(:struct kevent64_s) (length del-filters))
+    (loop
+       for i from 0 below (length del-filters)
+       for f in del-filters
+       do
+	 (let ((kevt (mem-aptr changelist '(:struct kevent64_s) i)))
+	   (with-foreign-slots ((ident filter flags) kevt (:struct kevent64_s))
+	     (setf ident fd
+		   filter f
+		   flags :EV-DELETE))))
+
+    (kevent64 kfd changelist (length del-filters)
+	      (null-pointer) 0 KEVENT-FLAG-IMMEDIATE (null-pointer))))
 
 (defun filter->enum (filter)
   (ecase filter
     (:in :evfilt-read)
     (:out :evfilt-write)))
 
+(defun filters->enums (filters)
+  (mapcar #'filter->enum filters))
+
+(defun flatten (ls)
+  (labels ((mklist (x) (if (listp x) x (list x))))
+    (mapcan #'(lambda (x) (if (atom x) (mklist x) (flatten x))) ls)))
+
+(defun flags->enums (flags)
+  (flatten
+   (mapcar #'flag->enum flags)))
+
 (defun flag->enum (flag)
   (ecase flag
     (:edge '(:EV-CLEAR))
     (:eof '(:EV-EOF))
     (:error '(:EV-ERROR))))
+
+(defun kqueue-events (kfd &optional (max-evts 128))
+  (with-foreign-object (evtlist '(:struct kevent64_s) max-evts)
+    (let ((nevts (kevent64 kfd (null-pointer) 0 evtlist max-evts 0 (null-pointer))))
+      (loop for i from 0 below nevts
+	 for evt = (mem-aptr evtlist '(:struct kevent64_s) i)
+	 then (mem-aptr evtlist '(:struct kevent64_s) i)
+	 collect
+	   (with-foreign-slots
+	       ((ident filter flags fflags data udata ext) evt (:struct kevent64_s))
+	     #+debug
+	     (format t "EVENT: ident=~s, filter=~s, flags=~s~%"
+		     ident filter flags)
+	     (concatenate
+	      'list
+	      (list :handle ident :filter filter :udata udata
+		    :flags flags :fflags fflags)
+	      (case filter
+		(:EVFILT-READ  (list :bytes-in data))
+		(:EVFILT-WRITE (list :bytes-out data)))))))))
+
+(defun platform->universal-filter (filter)
+  (case filter
+    (:EVFILT-READ :in)
+    (:EVFILT-WRITE :out)))
+
+(defun platform->universal-flag (flag)
+  (case flag
+    (:EV-ERROR :error)
+    (:EV-EOF :eof)
+    (t nil)))
+
+(defun platform->universal-event (event)
+  (loop for elem on event by #'cddr
+     do
+       (let ((prop (car elem))
+	     (val (cadr elem)))
+	 (case prop
+	   (:filter
+	    (setf (cadr elem) (platform->universal-filter val)))
+	   (:flags
+	    (let ((translated (loop for flag in val
+				 with flg
+				 do (setf flg (platform->universal-flag flag))
+				 when flg collect flg)))
+	      (setf (cadr elem) translated))))))
+  event)

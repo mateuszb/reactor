@@ -7,7 +7,7 @@
 	   "sys/time.h")
 
   (bitfield
-   (flags :base-type :int16)
+   (flags :base-type :uint16)
    ((:ev-add "EV_ADD"))
    ((:ev-enable "EV_ENABLE"))
    ((:ev-disable "EV_DISABLE"))
@@ -34,10 +34,10 @@
   (cstruct kevent64_s "struct kevent64_s"
 	   (ident "ident" :type :uint64)
 	   (filter "filter" :type filter)
-	   (flags "flags" :type :uint16)
+	   (flags "flags" :type flags)
 	   (fflags "fflags" :type :uint32)
 	   (data "data" :type :int64)
-	   (udata "udata" :type :uint64)
+	   (udata "udata" :type :pointer)
 	   (ext "ext" :type :uint64 :count 2))
 
   (ctype :time_t "time_t")

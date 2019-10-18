@@ -85,6 +85,7 @@
 (defun reactor-modify (reactor handle filters flags)
   (let ((translated-filters (filters->enums filters))
 	(translated-flags (flags->enums flags)))
+    #+debug
     (format t "reactor-modify: translated flags=~a~%" translated-flags)
     #+linux
     (epoll-mod
