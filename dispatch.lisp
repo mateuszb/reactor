@@ -10,10 +10,11 @@
    (data :initform nil :accessor context-data :initarg :data)))
 
 (defmethod print-object ((obj context) stream)
-  (format stream "handle=~a, handlers=~a, data=~a"
-	  (context-handle obj)
-	  (handlers obj)
-	  (context-data obj)))
+  (print-unreadable-object (obj stream :type t)
+    (format stream "handle=~a, handlers=~a, data=~a"
+	    (context-handle obj)
+	    (handlers obj)
+	    (context-data obj))))
 
 (defun make-context (handle filters flags &optional handlers data)
   (make-instance
